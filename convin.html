@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>용산구 편의점 위치 지도</title>
+    <script type="text/javascript" src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=pepn7bcq5f&submodules=geocoder"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        
+        .map-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        #map {
+            width: 100%;
+            height: 600px;
+        }
+        
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .filter-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .filter-btn.active {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .gs25 { background: linear-gradient(45deg, #ff6b6b, #ee5a52); color: white; }
+        .cu { background: linear-gradient(45deg, #4ecdc4, #44a08d); color: white; }
+        .seveneleven { background: linear-gradient(45deg, #667eea, #764ba2); color: white; }
+        .emart24 { background: linear-gradient(45deg, #ffa726, #ff9800); color: white; }
+        .ministop { background: linear-gradient(45deg, #26c6da, #00acc1); color: white; }
+        .all { background: linear-gradient(45deg, #f093fb, #f5576c); color: white; }
+        
+        .legend {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .legend h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .gs25-color { background: #ff6b6b; }
+        .cu-color { background: #4ecdc4; }
+        .seveneleven-color { background: #667eea; }
+        .emart24-color { background: #ffa726; }
+        .ministop-color { background: #26c6da; }
+        
+        .info-window {
+            padding: 10px;
+            max-width: 250px;
+        }
+        
+        .info-window h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .info-window p {
+            margin: 5px 0;
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2em; }
+            .container { padding: 0 10px; }
+            #map { height: 400px; }
+            .filter-buttons { flex-direction: column; align-items: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏪 용산구 편의점 위치 지도</h1>
+        <p>서울시 용산구의 편의점 위치</p>
+    </div>
+    
+    <div class="container">
+        <div class="controls">
+            <div class="filter-buttons">
+                <button class="filter-btn all active" onclick="showAllStores()">전체 보기</button>
+                <button class="filter-btn gs25" onclick="showStoresByBrand('GS25')">GS25</button>
+                <button class="filter-btn cu" onclick="showStoresByBrand('CU')">CU</button>
+                <button class="filter-btn seveneleven" onclick="showStoresByBrand('세븐일레븐')">세븐일레븐</button>
+                <button class="filter-btn emart24" onclick="showStoresByBrand('이마트24')">이마트24</button>
+                <button class="filter-btn ministop" onclick="showStoresByBrand('미니스톱')">미니스톱</button>
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+        
+        <div class="legend">
+            <h3>🏪 편의점 범례</h3>
+            <div class="legend-item">
+                <div class="legend-color gs25-color"></div>
+                <span><strong>GS25</strong></span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color cu-color"></div>
+                <span><strong>CU</strong></span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color seveneleven-color"></div>
+                <span><strong>세븐일레븐</strong></span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color emart24-color"></div>
+                <span><strong>이마트24</strong></span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color ministop-color"></div>
+                <span><strong>미니스톱</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let map;
+        let markers = [];
+        let currentFilter = 'all';
+        
+        const convenienceStores = [
+            { name: "GS25 이촌역점", brand: "GS25", address: "서울특별시 용산구 이촌동 306-2", lat: 37.5194, lng: 126.9750, phone: "02-749-1234", hours: "24시간", description: "이촌역 근처 GS25 편의점" },
+            { name: "CU 이촌점", brand: "CU", address: "서울특별시 용산구 이촌동 305-1", lat: 37.5185, lng: 126.9748, phone: "02-749-5678", hours: "24시간", description: "이촌동 CU 편의점" },
+            { name: "세븐일레븐 이촌동점", brand: "세븐일레븐", address: "서울특별시 용산구 이촌동 307-3", lat: 37.5201, lng: 126.9755, phone: "02-749-9012", hours: "24시간", description: "이촌동 세븐일레븐 편의점" },
+            { name: "GS25 한강점", brand: "GS25", address: "서울특별시 용산구 이촌동 302-5", lat: 37.5178, lng: 126.9762, phone: "02-749-3456", hours: "24시간", description: "한강 근처 GS25 편의점" },
+            { name: "CU 한강공원점", brand: "CU", address: "서울특별시 용산구 이촌동 301-8", lat: 37.5172, lng: 126.9768, phone: "02-749-7890", hours: "24시간", description: "한강공원 근처 CU 편의점" },
+            { name: "세븐일레븐 용산점", brand: "세븐일레븐", address: "서울특별시 용산구 이촌동 308-2", lat: 37.5210, lng: 126.9745, phone: "02-749-2468", hours: "24시간", description: "용산구 세븐일레븐 편의점" }
+        ];
+        
+        function initMap() {
+            if (typeof naver === 'undefined') {
+                document.getElementById('map').innerHTML = 
+                    '<div style="padding: 20px; text-align: center; color: red; font-size: 18px;">네이버 맵 API 로딩 실패</div>';
+                return;
+            }
+            try {
+                const mapOptions = {
+                    center: new naver.maps.LatLng(37.5300, 126.9750),
+                    zoom: 14,
+                    mapTypeControl: true,
+                    mapTypeControlOptions: { style: naver.maps.MapTypeControlStyle.BUTTON, position: naver.maps.Position.TOP_RIGHT },
+                    zoomControl: true,
+                    zoomControlOptions: { style: naver.maps.ZoomControlStyle.SMALL, position: naver.maps.Position.RIGHT_CENTER }
+                };
+                map = new naver.maps.Map('map', mapOptions);
+                naver.maps.Event.addListener(map, 'init', function() {
+                    addStoreMarkers();
+                });
+            } catch (error) {
+                document.getElementById('map').innerHTML = 
+                    '<div style="padding: 20px; text-align: center; color: red; font-size: 18px;">지도 초기화 실패</div>';
+            }
+        }
+        
+        function addStoreMarkers() {
+            convenienceStores.forEach((store) => {
+                const marker = new naver.maps.Marker({
+                    position: new naver.maps.LatLng(store.lat, store.lng),
+                    map: map,
+                    title: store.name,
+                    icon: { content: createMarkerHTML(store.brand), anchor: new naver.maps.Point(12, 12) }
+                });
+                const infoWindow = new naver.maps.InfoWindow({ content: createInfoWindowContent(store) });
+                naver.maps.Event.addListener(marker, 'click', function() { infoWindow.open(map, marker); });
+                markers.push({ marker, store, infoWindow });
+            });
+        }
+        
+        function createMarkerHTML(brand) {
+            let color; let emoji;
+            switch(brand) {
+                case 'GS25': color = '#ff6b6b'; emoji = '🟥'; break;
+                case 'CU': color = '#4ecdc4'; emoji = '🟩'; break;
+                case '세븐일레븐': color = '#667eea'; emoji = '🟦'; break;
+                case '이마트24': color = '#ffa726'; emoji = '🟧'; break;
+                case '미니스톱': color = '#26c6da'; emoji = '🟦'; break;
+                default: color = '#999'; emoji = '🏪';
+            }
+            return `
+                <div style="
+                    width: 24px;
+                    height: 24px;
+                    background: ${color};
+                    border: 2px solid white;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    cursor: pointer;
+                ">
+                    ${emoji}
+                </div>
+            `;
+        }
+        
+        function createInfoWindowContent(store) {
+            return `
+                <div class="info-window">
+                    <h4>${store.name}</h4>
+                    <p><strong>브랜드:</strong> ${store.brand}</p>
+                    <p><strong>주소:</strong> ${store.address}</p>
+                    <p><strong>전화번호:</strong> ${store.phone}</p>
+                    <p><strong>영업시간:</strong> ${store.hours}</p>
+                </div>
+            `;
+        }
+        
+        function showAllStores() {
+            currentFilter = 'all';
+            updateFilterButtons('all');
+            markers.forEach(item => { item.marker.setMap(map); });
+        }
+        
+        function showStoresByBrand(brand) {
+            currentFilter = brand;
+            updateFilterButtons(brand);
+            markers.forEach(item => {
+                if (item.store.brand === brand) item.marker.setMap(map);
+                else item.marker.setMap(null);
+            });
+        }
+        
+        function updateFilterButtons(activeFilter) {
+            const buttons = document.querySelectorAll('.filter-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent === '전체 보기' && activeFilter === 'all') {
+                    btn.classList.add('active');
+                } else if (btn.textContent === activeFilter) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+        
+        window.onload = function() { initMap(); };
+    </script>
+</body>
+</html>
